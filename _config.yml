@@ -1,0 +1,8 @@
+title: yohhoy's note
+description: technical memorandum in English.
+
+url: http://yohhoy.github.io
+permalink: /:year-:month-:day/:title
+
+markdown: redcarpet
+
