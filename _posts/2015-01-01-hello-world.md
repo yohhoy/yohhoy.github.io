@@ -7,9 +7,11 @@ title: Hello world!
 ```c
 #include <stdio.h>
 
+/* entry point */
 int main()
 {
   printf("Hello, world!\n");
+  return 0;
 }
 ```
 
