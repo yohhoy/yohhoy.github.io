@@ -5,4 +5,7 @@ url: http://yohhoy.github.io
 permalink: /:year-:month-:day/:title
 
 markdown: redcarpet
+highlighter: pygments
+safe: true
+lsi: false
 
