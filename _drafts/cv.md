@@ -8,16 +8,16 @@ title: Draft
 ミューテックスは排他制御機構として有名ですし、その動作もロック(lock)／アンロック(unlock)と比較的理解しやすいため、不適切に利用されるケースはあまり無いと思います。
 一方、条件変数の動作仕様はしばしば誤解され、不適切な利用による並行性バグに悩まされるケースが多いようです。 -->
 
-A lot of programming languages provides "mutex" and "**condition variable**" for synchronization primitives in multithreaded programing.
+A lot of programming languages provide "mutex" and "**condition variable**" for synchronization primitives in multithreaded programing.
 Mutex is known as a mutual excection mechanism, which its lock and unlock behaviors are not hard to undertand, there might be a rare case of inappropriate usage.
-On the other hand, some programmers have a misunderstanding about the specification of condition variable, he/she often suffers from concurrency bug because of inappropriate usage.
+On the other hand, some programmers have a misunderstanding about the specification of condition variable, he/she often suffers from concurrency bug because of erroneously usage.
 
 <!-- 本記事では、スレッドセーフなFIFO(First-In-First-Out)キューを段階的に実装していく事例を通して、条件変数の適切な使い方について説明していきます。
 例示コードではC++11標準ライブラリを用いますが、Pthreads(POSIX Threads)やC11標準ライブラリへは単純に読み替え可能です。
 また、C++11標準ライブラリからBoost.Threadライブラリへの対応関係は自明なはずです。 -->
 
 In this post, I'll explain the proper use of condition variable, through step-by-step implementation of thread-safety FIFO(First-In-First-Out) queue.
-We'll use C++11 Standard Library in example code, you could rewrite easily with Pthreads(POSIX Threads) or C11 Standard Library.
+I use C++11 Standard Library in example code, but you could rewrite easily with Pthreads(POSIX Threads) or C11 Standard Library.
 Also you can rewrite trivially with Boost.Thread library from C++11 Standard Library.
 
 <!-- 本記事中のソースコードはBoost Software License 1.0で公開しています。 -->
@@ -33,14 +33,14 @@ For familiar with Pthreads: Replace `pthread_cond_signal` to `notify_one`, `pthr
 
 <!-- 次の仕様を満たす、スレッドセーフ・FIFOキュー`mt_queue`を実装していきます。 -->
 
-We start to implement thread-safe FIFO queue `mt_queue` which meets the following requirement.
+We start to implement thread-safe FIFO queue `mt_queue`, which meets the following requirement.
 
 <!-- クラス仕様: int型要素を最大10個まで格納可能なFIFO操作コンテナ。各メンバ関数を異なるスレッドから同時に呼び出してもよい（スレッドセーフ）。
 push操作: キューに新しい要素を1つ追加する。キューに空き容量が無ければ、空きができるまで呼び出し元スレッドをブロッキングする。
 pop操作: キューから最も古い要素を1つ取り出す。キュー内に要素が存在しなれば、要素が追加されるまで呼び出し元スレッドをブロッキングする。 -->
 
 <dl>
-<dt>Specification:</dt><dd>FIFO-queue container which contains int value up to 10 elements. User can invoke each its member function from different threads simultaneously. (thrad-safe)</dd>
+<dt>Class spec.:</dt><dd>FIFO-queue container which contains `int` value up to 10 elements. User can invoke each its member function from different threads simultaneously. (thrad-safe)</dd>
 <dt>Push operation:</dt><dd>Add one new element to queue. If the queue is full, caller thread is blocked until there are some rooms.</dd>
 <dt>Pop operation:</dt><dd>Get oldest element from queue. If the queue is empty, caller thread is blocked until there are some elements.</dd>
 </dl>
@@ -79,8 +79,8 @@ public:
 In above code, we did not take account of multithreding at all.
 When difference threads call `push()`/`pop()` member function at the same time, the code doesn't run correctly because it has data race.
 It might run rarely as we expected, but we should acknowledge that it is essentially "broken" code.
-The concurrency architechture is of utmost importance in the design of multithreaded program.
-It cann't be recommended "Works as expected, it's OK" style, unless you would like wonderful experience to debug crash occurs with terribly low frequency, or deadlock under heavily-loaded system status, or stall process in Release Build not in Debug Build.
+The concurrency design is of utmost importance in the design of multithreaded program.
+It cann't be recommended "Works as expected, it's OK" style, unless you would like wonderful experience to debug unreproducible crash in extremely low frequency, or deadlock under heavily-loaded situation, or stall only in Release Build not in Debug Build.
 
 
 # Step0: Mutex + busy-loop wait
@@ -90,7 +90,7 @@ It cann't be recommended "Works as expected, it's OK" style, unless you would li
 まずは、最も単純なビジーループ(busy-loop; busy-wait)方式で仕様通り実装してみましょう。 -->
 
 The *controlling mutual execution with mutex object* is the basis of multithreaded program for everything.
-We should procect by mutex locking all variable accesses which multiple threads would modify it simultaneously.
+We should procect by mutex locking any variable accesses, which multiple threads would modify it simultaneously.
 First, let's implement requirements with simplest busy-loop (busy-wait) mechanism.
 &#91;[mt_queue0.cpp](https://gist.github.com/yohhoy/d305a6c5249c55ed89a3#file-mt_queue0-cpp)&#93;
 
@@ -104,7 +104,8 @@ class mt_queue {
 public:
   void push(int data) {
     std::unique_lock<std::mutex> lk(mtx_);  // acquire lock
-    while (q_.size() == capacity) {      lk.unlock();  // release lock temporary
+    while (q_.size() == capacity) {
+      lk.unlock();  // release lock temporary
       std::this_thread::yield();
       lk.lock();    // re-acquire lock
     }
