@@ -4,6 +4,9 @@ description: technical memorandum in English.
 url: http://yohhoy.github.io
 permalink: /:year-:month-:day/:title
 
+twitter_username: yohhoy
+github_username: yohhoy
+
 markdown: redcarpet
 highlighter: pygments
 safe: true
